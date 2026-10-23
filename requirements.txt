@@ -1,0 +1,8 @@
+autogen-agentchat==0.7.5
+autogen-ext[openai]==0.7.5
+streamlit==1.66.1
+pandas==3.1.0
+numpy
+matplotlib==3.11.2
+openpyxl==3.1.5
+fpdf2==2.8.9

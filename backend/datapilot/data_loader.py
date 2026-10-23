@@ -1,0 +1,63 @@
+"""Load an uploaded CSV / Excel file into the session sandbox and describe it for the Planner."""
+
+from __future__ import annotations
+
+import io
+from pathlib import Path
+
+import pandas as pd
+
+ALL_SHEETS = "__all__"
+DATA_FILE_NAME = "data.csv"
+
+
+def list_sheets(raw: bytes) -> list[str]:
+    return pd.ExcelFile(io.BytesIO(raw)).sheet_names
+
+
+def read_upload(file_name: str, raw: bytes, sheet: str | None = None) -> pd.DataFrame:
+    """Read CSV or Excel bytes. For Excel, `sheet=ALL_SHEETS` stacks every sheet
+    (adding a `sheet` column) - handy when data is split per month/quarter."""
+    suffix = Path(file_name).suffix.lower()
+    if suffix in (".xlsx", ".xlsm", ".xls"):
+        book = pd.read_excel(io.BytesIO(raw), sheet_name=None)
+        if sheet in (None, ALL_SHEETS):
+            if len(book) == 1:
+                return next(iter(book.values()))
+            frames = [df.assign(sheet=name) for name, df in book.items() if not df.empty]
+            return pd.concat(frames, ignore_index=True)
+        if sheet not in book:
+            raise ValueError(f"Sheet '{sheet}' not found. Available: {', '.join(book)}")
+        return book[sheet]
+    if suffix in (".csv", ".txt"):
+        return pd.read_csv(io.BytesIO(raw))
+    raise ValueError(f"Unsupported file type '{suffix}'. Upload a .csv or .xlsx file.")
+
+
+def stage_dataset(df: pd.DataFrame, work_dir: Path) -> Path:
+    """Write the dataset as data.csv inside the sandbox folder the code runs in."""
+    work_dir.mkdir(parents=True, exist_ok=True)
+    path = work_dir / DATA_FILE_NAME
+    df.to_csv(path, index=False)
+    return path
+
+
+def profile(df: pd.DataFrame, max_categories: int = 8) -> str:
+    """Compact, token-cheap description of the data for the Planner/Coder."""
+    lines = [f"Rows: {len(df):,} | Columns: {len(df.columns)}", "Columns (dtype -> examples):"]
+    for col in df.columns:
+        s = df[col]
+        nunique = s.nunique(dropna=True)
+        is_text = pd.api.types.is_string_dtype(s) or s.dtype == object
+        if is_text and nunique <= max_categories:
+            examples = ", ".join(map(str, s.dropna().unique()[:max_categories]))
+            detail = f"{nunique} values: {examples}"
+        elif pd.api.types.is_numeric_dtype(s):
+            detail = f"min {s.min()}, max {s.max()}"
+        else:
+            detail = f"{nunique} unique, e.g. {', '.join(map(str, s.dropna().unique()[:3]))}"
+        nulls = int(s.isna().sum())
+        lines.append(f"- {col} ({s.dtype}){' [' + str(nulls) + ' nulls]' if nulls else ''} -> {detail}")
+    lines.append("First 3 rows (CSV):")
+    lines.append(df.head(3).to_csv(index=False).strip())
+    return "\n".join(lines)

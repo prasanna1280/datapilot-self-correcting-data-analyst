@@ -1,0 +1,20 @@
+# secrets
+.env
+*.pem
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# runtime data (sessions, sandbox output, sqlite db)
+data/runtime/
+data/*.db
+data/*.db-*
+
+# editors / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,62 @@
+name: datapilot
+
+services:
+  app:
+    build: .
+    image: datapilot-app:latest
+    container_name: datapilot-app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      EXECUTOR_MODE: sandbox
+      SANDBOX_URL: http://sandbox:8800
+    volumes:
+      - runtime:/data/runtime
+      - db:/data/db
+    networks: [default, sandbox_net]
+    depends_on:
+      sandbox:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${APP_PORT:-8510}:8501"   # local access only; public traffic comes via Traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=datapilot_default
+      - traefik.http.routers.datapilot.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.datapilot.entrypoints=websecure
+      - traefik.http.routers.datapilot.tls=true
+      - traefik.http.routers.datapilot.tls.certresolver=letsencrypt
+      - traefik.http.routers.datapilot.middlewares=datapilot-headers
+      - traefik.http.middlewares.datapilot-headers.headers.stsSeconds=31536000
+      - traefik.http.middlewares.datapilot-headers.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.datapilot-headers.headers.referrerPolicy=strict-origin-when-cross-origin
+      - traefik.http.services.datapilot.loadbalancer.server.port=8501
+
+  sandbox:
+    build: ./backend/sandbox
+    image: datapilot-sandbox:latest
+    container_name: datapilot-sandbox
+    restart: unless-stopped
+    environment:                 # deliberately NO env_file: the sandbox never sees API keys
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-}
+      SANDBOX_MAX_TIMEOUT: "120"
+    volumes:
+      - runtime:/data/runtime
+    networks: [sandbox_net]      # internal network = no internet access
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 128
+
+volumes:
+  runtime:
+  db:
+
+networks:
+  default:
+  sandbox_net:
+    internal: true

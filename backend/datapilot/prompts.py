@@ -46,7 +46,9 @@ FILES
 SUGGESTED NEXT QUESTION
 <one useful follow-up question>
 
-APPROVED"""
+APPROVED
+
+The last line MUST be the word APPROVED. Answer only the user's question; do not ask the Coder to analyse the suggested next question."""
 
 TASK_TEMPLATE = """Business question: {question}
 

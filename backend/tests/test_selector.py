@@ -33,3 +33,12 @@ def test_reviewer_feedback_goes_back_to_coder():
 def test_follow_up_restarts_at_planner():
     history = msgs((REVIEWER, "ANSWER ...\nAPPROVED"), ("user", "follow-up?"))
     assert select_next_speaker(history) == PLANNER
+
+
+def test_complete_answer_without_approved_line_still_approves():
+    from backend.datapilot.team import is_approved, reviewer_approved
+    answer = "ANSWER\nElectronics fell.\n\nWHERE IT CAME FROM\nSouth.\n\nSUGGESTED NEXT QUESTION\nWhy?"
+    assert is_approved(answer) and is_approved(answer + "\n\nAPPROVED")
+    assert not is_approved("FEEDBACK: the ANSWER section lacks WHERE IT CAME FROM numbers")
+    assert reviewer_approved(msgs((REVIEWER, answer)))
+    assert not reviewer_approved(msgs((CODER, answer)))

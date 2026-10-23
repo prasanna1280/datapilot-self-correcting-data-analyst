@@ -61,3 +61,12 @@ async def test_stops_after_12_messages_without_approval(db, sales_df):
     assert result.n_messages == 12
     assert result.status == "limit" and result.answer is None
     assert "Maximum number of messages 12 reached" in (result.stop_reason or "")
+
+
+@pytest.mark.asyncio
+async def test_answer_missing_approved_line_still_stops(db, sales_df):
+    session = AnalysisSession.create(db, sales_df, "sales_2026.csv")
+    no_tag = ANSWER.replace("\n\nAPPROVED", "")
+    result = await session.ask("q", model_client=ReplayChatCompletionClient([PLAN, FIXED, no_tag]))
+    assert result.status == "approved" and result.n_messages == 5
+    assert result.answer.startswith("ANSWER")

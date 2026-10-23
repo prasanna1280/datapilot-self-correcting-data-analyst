@@ -18,7 +18,7 @@ from typing import Sequence
 
 from autogen_agentchat.agents import AssistantAgent, CodeExecutorAgent
 from autogen_agentchat.base import TerminationCondition
-from autogen_agentchat.conditions import MaxMessageTermination, TextMentionTermination
+from autogen_agentchat.conditions import FunctionalTermination, MaxMessageTermination, TextMentionTermination
 from autogen_agentchat.messages import BaseAgentEvent, BaseChatMessage
 from autogen_agentchat.teams import BaseGroupChat, RoundRobinGroupChat, SelectorGroupChat
 from autogen_core.code_executor import CodeExecutor
@@ -42,7 +42,17 @@ def execution_failed(text: str) -> bool:
 
 
 def is_approved(text: str) -> bool:
-    return text.rstrip().endswith(APPROVED)
+    """A Reviewer reply approves if it ends with APPROVED, or if it is a complete
+    final answer (ANSWER + WHERE IT CAME FROM) and not FEEDBACK - models sometimes
+    drop the last APPROVED line, which must not send finished work back to the Coder."""
+    t = text.strip()
+    if t.upper().startswith("FEEDBACK"):
+        return False
+    return t.endswith(APPROVED) or (t.startswith("ANSWER") and "WHERE IT CAME FROM" in t)
+
+
+def reviewer_approved(messages: Sequence[BaseAgentEvent | BaseChatMessage]) -> bool:
+    return any(isinstance(m, BaseChatMessage) and m.source == REVIEWER and is_approved(m.to_text()) for m in messages)
 
 
 def select_next_speaker(messages: Sequence[BaseAgentEvent | BaseChatMessage]) -> str | None:
@@ -77,8 +87,11 @@ def make_model_client() -> ChatCompletionClient:
 
 def make_termination(max_messages: int | None = None) -> TerminationCondition:
     # Only the Reviewer can approve, so a Planner saying "until APPROVED" can't end the run.
-    return TextMentionTermination(APPROVED, sources=[REVIEWER]) | MaxMessageTermination(
-        max_messages or settings.max_messages
+    # FunctionalTermination also catches a final answer whose APPROVED line was left off.
+    return (
+        TextMentionTermination(APPROVED, sources=[REVIEWER])
+        | FunctionalTermination(reviewer_approved)
+        | MaxMessageTermination(max_messages or settings.max_messages)
     )
 
 

@@ -38,6 +38,13 @@ python scripts/push_env.py APP_PASSWORD     # only the password
 ```
 Values go over SSH stdin and are never printed; keys that are empty locally are skipped.
 
+### Sign-in sessions
+After a correct password the browser gets a `dp_auth` cookie valid for **7 days** (`AUTH_DAYS` in
+`frontend/app.py`), so page refreshes and deep links don't ask again. The cookie holds only an expiry and an
+HMAC-SHA256 signature keyed on `APP_PASSWORD`, never the password itself (`SameSite=Strict`, `Secure` over HTTPS).
+- **Sign out** in the sidebar clears it for that browser.
+- **Changing `APP_PASSWORD`** (`push_env.py APP_PASSWORD`) invalidates every existing cookie, signing everyone out.
+
 ## 5. Operations
 | Task | Command |
 |---|---|
@@ -45,6 +52,7 @@ Values go over SSH stdin and are never printed; keys that are empty locally are 
 | Restart | `docker compose restart` |
 | Back up DB | `docker compose cp app:/data/db/datapilot.db ./backup.db` |
 | Remove the password | blank `APP_PASSWORD` in `.env`, then `docker compose up -d` |
+| Sign everyone out | change `APP_PASSWORD` locally, then `python scripts/push_env.py APP_PASSWORD` |
 | Verify sandbox has no internet | `docker compose exec sandbox python -c "import urllib.request as u;u.urlopen('https://example.com',timeout=5)"` → must fail |
 
 The app is also bound to `127.0.0.1:8510` on the VPS for local debugging (`ssh -L 8510:localhost:8510 roaster-vps`).

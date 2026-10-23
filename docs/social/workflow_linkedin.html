@@ -1,0 +1,160 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>DataPilot Workflow</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --brand:#7A1F2B; --brand-soft:#F8EDEE; --ink:#0F172A; --muted:#475569; --line:#CBD5E1;
+          --err:#B42318; --err-soft:#FEF3F2; --ok:#067647; --ok-soft:#ECFDF3; --amber:#B54708; }
+  html, body { margin:0; background:#fff; }
+  body { width:1200px; height:627px; font-family:Inter, "Segoe UI", Arial, sans-serif; color:var(--ink); }
+  svg text { font-family:Inter, "Segoe UI", Arial, sans-serif; }
+</style></head>
+<body>
+<svg width="1200" height="627" viewBox="0 0 1200 627" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#F7F3F4"/>
+    </linearGradient>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#64748B"/></marker>
+    <marker id="aErr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#B42318"/></marker>
+    <marker id="aAmb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#B54708"/></marker>
+    <marker id="aOk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#067647"/></marker>
+  </defs>
+  <rect width="1200" height="627" fill="url(#bg)"/>
+  <rect width="1200" height="6" fill="#7A1F2B"/>
+
+  <!-- header -->
+  <g transform="translate(50,34)">
+    <rect width="44" height="44" rx="11" fill="#7A1F2B"/>
+    <path d="M11 33V11h6.5c5.5 0 8.8 3.3 8.8 8.8s-3.3 8.8-8.8 8.8H11z" fill="none"/>
+    <text x="22" y="30" text-anchor="middle" font-size="17" font-weight="800" fill="#fff">DP</text>
+    <text x="60" y="20" font-size="24" font-weight="800" fill="#0F172A">DataPilot <tspan fill="#7A1F2B">· Self-Correcting Data Analyst</tspan></text>
+    <text x="60" y="42" font-size="14.5" fill="#475569">Ask a business question in plain English. AI agents plan, write Python, run it, fix their own errors, and get reviewed.</text>
+  </g>
+  <g transform="translate(985,38)">
+    <rect width="165" height="30" rx="15" fill="#F8EDEE"/>
+    <text x="82.5" y="20" text-anchor="middle" font-size="12.5" font-weight="700" fill="#7A1F2B">Multi-agent · AutoGen 0.7</text>
+  </g>
+
+  <!-- happy-path arrows -->
+  <g stroke="#64748B" stroke-width="2" fill="none" marker-end="url(#a)">
+    <line x1="210" y1="190" x2="236" y2="190"/>
+    <line x1="398" y1="190" x2="424" y2="190"/>
+    <line x1="586" y1="190" x2="612" y2="190"/>
+    <line x1="774" y1="190" x2="800" y2="190"/>
+  </g>
+  <line x1="962" y1="190" x2="988" y2="190" stroke="#067647" stroke-width="2.5" marker-end="url(#aOk)"/>
+  <text x="975" y="124" text-anchor="middle" font-size="11.5" font-weight="800" fill="#067647">APPROVED</text>
+  <line x1="975" y1="130" x2="975" y2="178" stroke="#067647" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+  <!-- nodes: x = 50, 238, 426, 614, 802, 990; y 135..245 -->
+  <g font-size="12.5">
+    <!-- 01 Ask -->
+    <g transform="translate(50,135)">
+      <rect width="160" height="110" rx="14" fill="#fff" stroke="#CBD5E1" stroke-width="1.5"/>
+      <text x="16" y="26" font-size="11" font-weight="800" fill="#7A1F2B" letter-spacing="1">01 · ASK</text>
+      <text x="16" y="50" font-size="17" font-weight="700" fill="#0F172A">You</text>
+      <text x="16" y="72" fill="#475569">Upload CSV / Excel</text>
+      <text x="16" y="90" fill="#475569">+ a business question</text>
+    </g>
+    <!-- 02 Plan -->
+    <g transform="translate(238,135)">
+      <rect width="160" height="110" rx="14" fill="#fff" stroke="#CBD5E1" stroke-width="1.5"/>
+      <text x="16" y="26" font-size="11" font-weight="800" fill="#7A1F2B" letter-spacing="1">02 · PLAN</text>
+      <text x="16" y="50" font-size="17" font-weight="700" fill="#0F172A">Planner</text>
+      <text x="16" y="72" fill="#475569">Breaks the question</text>
+      <text x="16" y="90" fill="#475569">into clear steps</text>
+    </g>
+    <!-- 03 Code -->
+    <g transform="translate(426,135)">
+      <rect width="160" height="110" rx="14" fill="#fff" stroke="#7A1F2B" stroke-width="2"/>
+      <text x="16" y="26" font-size="11" font-weight="800" fill="#7A1F2B" letter-spacing="1">03 · CODE</text>
+      <text x="16" y="50" font-size="17" font-weight="700" fill="#0F172A">Coder</text>
+      <text x="16" y="72" fill="#475569">Writes analysis.py</text>
+      <text x="16" y="90" fill="#475569">(pandas + matplotlib)</text>
+    </g>
+    <!-- 04 Run -->
+    <g transform="translate(614,135)">
+      <rect width="160" height="110" rx="14" fill="#fff" stroke="#CBD5E1" stroke-width="1.5"/>
+      <text x="16" y="26" font-size="11" font-weight="800" fill="#7A1F2B" letter-spacing="1">04 · RUN</text>
+      <text x="16" y="50" font-size="17" font-weight="700" fill="#0F172A">Executor</text>
+      <text x="16" y="72" fill="#475569">Runs it in an isolated</text>
+      <text x="16" y="90" fill="#475569">Docker sandbox</text>
+    </g>
+    <!-- 05 Review -->
+    <g transform="translate(802,135)">
+      <rect width="160" height="110" rx="14" fill="#fff" stroke="#CBD5E1" stroke-width="1.5"/>
+      <text x="16" y="26" font-size="11" font-weight="800" fill="#7A1F2B" letter-spacing="1">05 · REVIEW</text>
+      <text x="16" y="50" font-size="17" font-weight="700" fill="#0F172A">Reviewer</text>
+      <text x="16" y="72" fill="#475569">Checks numbers, logic</text>
+      <text x="16" y="90" fill="#475569">and chart labels</text>
+    </g>
+    <!-- 06 Answer -->
+    <g transform="translate(990,135)">
+      <rect width="160" height="110" rx="14" fill="#7A1F2B"/>
+      <text x="16" y="26" font-size="11" font-weight="800" fill="#F2C6CB" letter-spacing="1">06 · ANSWER</text>
+      <text x="16" y="50" font-size="17" font-weight="700" fill="#fff">Human approval</text>
+      <text x="16" y="72" fill="#F8EDEE">Approve / reject,</text>
+      <text x="16" y="90" fill="#F8EDEE">then ask a follow-up</text>
+    </g>
+  </g>
+
+  <!-- self-correction loops -->
+  <path d="M694 245 C694 292, 506 292, 506 251" fill="none" stroke="#B42318" stroke-width="2.2" marker-end="url(#aErr)"/>
+  <rect x="533" y="268" width="134" height="24" rx="12" fill="#FEF3F2" stroke="#FDA29B"/>
+  <text x="600" y="284.5" text-anchor="middle" font-size="12" font-weight="700" fill="#B42318">ERROR → fixes itself</text>
+
+  <path d="M882 245 C882 352, 470 352, 470 251" fill="none" stroke="#B54708" stroke-width="2.2" stroke-dasharray="6 4" marker-end="url(#aAmb)"/>
+  <rect x="604" y="314" width="164" height="24" rx="12" fill="#FFFAEB" stroke="#FEC84B"/>
+  <text x="686" y="330.5" text-anchor="middle" font-size="12" font-weight="700" fill="#B54708">FEEDBACK → revises code</text>
+
+  <text x="50" y="342" font-size="12.5" fill="#475569">
+    <tspan font-weight="700" fill="#0F172A">Self-correcting loop:</tspan>
+    <tspan x="50" dy="18">errors and reviewer feedback go</tspan>
+    <tspan x="50" dy="18">back to the Coder automatically.</tspan>
+  </text>
+
+  <!-- bottom cards -->
+  <g transform="translate(50,410)">
+    <rect width="350" height="150" rx="14" fill="#fff" stroke="#E2E8F0"/>
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#7A1F2B">Guardrails</text>
+    <g font-size="12.5" fill="#334155">
+      <text x="20" y="60">• Stops on APPROVED or after 12 messages</text>
+      <text x="20" y="83">• Sandbox: no API keys, no internet, read-only</text>
+      <text x="20" y="106">• Static safety check before any code runs</text>
+      <text x="20" y="129">• analysis.py re-run to prove numbers repeat</text>
+    </g>
+  </g>
+  <g transform="translate(425,410)">
+    <rect width="350" height="150" rx="14" fill="#fff" stroke="#E2E8F0"/>
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#7A1F2B">What you get</text>
+    <g font-size="12.5" fill="#334155">
+      <text x="20" y="60">• Answer + where the numbers came from</text>
+      <text x="20" y="83">• Labelled PNG charts (colour-blind safe)</text>
+      <text x="20" y="106">• Re-runnable analysis.py + one-page PDF</text>
+      <text x="20" y="129">• ISO dates, ISO currency codes, K/M/B or lakh</text>
+    </g>
+  </g>
+  <g transform="translate(800,410)">
+    <rect width="350" height="150" rx="14" fill="#fff" stroke="#E2E8F0"/>
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#7A1F2B">Built with</text>
+    <g font-size="12" font-weight="600" fill="#334155">
+      <rect x="20" y="48" width="196" height="26" rx="13" fill="#F1F5F9"/><text x="118" y="65.5" text-anchor="middle">AutoGen SelectorGroupChat</text>
+      <rect x="224" y="48" width="70" height="26" rx="13" fill="#F1F5F9"/><text x="259" y="65.5" text-anchor="middle">GPT-4.1</text>
+      <rect x="20" y="82" width="78" height="26" rx="13" fill="#F1F5F9"/><text x="59" y="99.5" text-anchor="middle">Streamlit</text>
+      <rect x="106" y="82" width="70" height="26" rx="13" fill="#F1F5F9"/><text x="141" y="99.5" text-anchor="middle">pandas</text>
+      <rect x="184" y="82" width="88" height="26" rx="13" fill="#F1F5F9"/><text x="228" y="99.5" text-anchor="middle">matplotlib</text>
+      <rect x="20" y="116" width="64" height="26" rx="13" fill="#F1F5F9"/><text x="52" y="133.5" text-anchor="middle">SQLite</text>
+      <rect x="92" y="116" width="66" height="26" rx="13" fill="#F1F5F9"/><text x="125" y="133.5" text-anchor="middle">Docker</text>
+      <rect x="166" y="116" width="124" height="26" rx="13" fill="#F1F5F9"/><text x="228" y="133.5" text-anchor="middle">Traefik + HTTPS</text>
+    </g>
+  </g>
+
+  <!-- footer -->
+  <text x="50" y="597" font-size="13" fill="#475569"><tspan font-weight="700" fill="#0F172A">Live:</tspan> datapilot.prasanna.digital  ·  Hostinger VPS · Docker</text>
+  <text x="1150" y="597" text-anchor="end" font-size="13" fill="#475569">Track 3 · Agentic AI · Use case 03</text>
+</svg>
+</body></html>

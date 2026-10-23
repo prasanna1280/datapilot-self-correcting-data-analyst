@@ -74,7 +74,7 @@ div[data-testid="stMetricValue"] { font-size: 1.35rem; font-weight: 600; color: 
 .dp-kv { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .dp-kv div { background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; box-shadow: var(--shadow); }
 .dp-kv small { display:block; color: var(--muted); font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
-.dp-kv b { display:block; color: var(--ink); font-size: 1rem; font-weight:600; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dp-kv b { display:block; color: var(--ink); font-size: .95rem; font-weight:600; margin-top:2px; overflow-wrap:anywhere; line-height:1.35; }
 
 /* ---------- 6-step pipeline ---------- */
 .dp-steps { display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 8px; margin: 6px 0 4px; }

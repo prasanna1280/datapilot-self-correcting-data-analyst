@@ -154,9 +154,9 @@ def _answer_tab(session: AnalysisSession, run: dict, charts, script, is_latest: 
 
     if charts:
         st.write("")
-        cols = st.columns(2)
+        cols = st.columns(2 if len(charts) > 1 else 1)
         for i, png in enumerate(charts):
-            with cols[i % 2], st.container(border=True):
+            with cols[i % len(cols)], st.container(border=True):
                 st.image(str(png), width="stretch")
                 c1, c2 = st.columns([3, 1.2], vertical_alignment="center")
                 c1.caption(f"{png.name} · {ui.file_size(png)}")

@@ -11,6 +11,7 @@ Track 3 Agentic AI · AutoGen · Use case 03
 - Hosted on a Hostinger VPS in Docker (app + isolated sandbox container) behind Traefik
 - HTTPS with a Let's Encrypt certificate (auto-renewed); `http://` redirects to `https://`
 - Access is password-protected (to protect the OpenAI budget). Ask the owner for access.
+  Sign-in lasts 7 days across page refreshes (a signed cookie, not the password); **Sign out** or changing `APP_PASSWORD` ends it.
 - Try it: **Use sample: sales_2026.csv** → **Ask the sample question** → watch the agents → **Approve answer** → ask a follow-up
 
 ```
@@ -109,6 +110,7 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 | Scripted smoke test inside Docker (`executor=sandbox`) | ✅ error → fix → APPROVED, reproducible |
 | Sandbox has no internet / no `OPENAI_API_KEY` | ✅ blocked / not present |
 | HTTPS certificate, HTTP→HTTPS redirect, HSTS | ✅ Let's Encrypt, 308 redirect, `max-age=31536000` |
+| Sign-in survives refresh and deep links; Sign out ends it | ✅ browser test on the live site |
 
 ### Live LLM runs (sample question on `sales_2026.csv`)
 *Which category had the biggest revenue drop in September vs August, and which region caused most of it?*

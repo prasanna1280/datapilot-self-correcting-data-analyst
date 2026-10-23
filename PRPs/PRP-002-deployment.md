@@ -25,6 +25,13 @@ Internet --443--> Traefik (host network, TLS via Let's Encrypt)
      app-only volume `db`    -> /data/db/datapilot.db        (SQLite)
 ```
 
+## Access control
+A public URL must not spend the OpenAI budget, so `APP_PASSWORD` gates the whole app.
+- **Requirement:** after signing in, users stay signed in across page refreshes and deep links for 7 days. Streamlit's `session_state` alone is lost on every reload.
+- **Design:** a `dp_auth` cookie `<expiry>.<HMAC-SHA256(APP_PASSWORD, "dp_auth:<expiry>")>` with `SameSite=Strict`, plus `Secure` over HTTPS. It never contains the password.
+- **Sign out** clears the cookie; rotating `APP_PASSWORD` (`scripts/push_env.py APP_PASSWORD`) invalidates all cookies.
+- Details: `docs/ARCHITECTURE.md` → Access control.
+
 ## Steps
 1. DNS: `A` record `<subdomain>` → VPS IP (Traefik needs it for the HTTP-01 challenge).
 2. `git clone` the repo to `/opt/apps/datapilot`.
@@ -37,6 +44,7 @@ Internet --443--> Traefik (host network, TLS via Let's Encrypt)
 - Smoke test prints `SMOKE TEST PASSED` with `executor=sandbox`.
 - `docker compose exec sandbox python -c "import urllib.request;urllib.request.urlopen('https://api.openai.com')"` **fails** (no internet from the sandbox).
 - `https://<domain>` serves a valid Let's Encrypt certificate; `http://` redirects to `https://`.
+- Sign-in: refreshing and opening `/history` stay signed in; **Sign out** + refresh shows the form again (`docs/TESTING.md` → Sign-in). Passed on 23 Oct 2026.
 
 ## Rollback
 `git checkout <previous tag> && docker compose up -d --build`. Data volumes are untouched.

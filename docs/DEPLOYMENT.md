@@ -30,7 +30,15 @@ Traefik requests the certificate on the first HTTPS hit (DNS must already point 
 cd /opt/apps/datapilot && git pull && docker compose up -d --build
 ```
 
-## 4. Operations
+## 4. Change secrets from your PC
+Edit the local `.env` (git-ignored), then push selected keys to the VPS and restart the app:
+```bash
+python scripts/push_env.py                  # OPENAI_API_KEY, OPENAI_MODEL, APP_PASSWORD, MAX_MESSAGES, CODE_TIMEOUT_SECONDS
+python scripts/push_env.py APP_PASSWORD     # only the password
+```
+Values go over SSH stdin and are never printed; keys that are empty locally are skipped.
+
+## 5. Operations
 | Task | Command |
 |---|---|
 | Logs | `docker compose logs -f app` / `docker compose logs -f sandbox` |

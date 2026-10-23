@@ -10,12 +10,27 @@ from typing import Any, Iterator
 
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
+# Columns added after v1.0. CREATE TABLE IF NOT EXISTS does not add columns to an
+# existing database, so they are added here (idempotent).
+MIGRATIONS = {
+    "sessions": {"dataset_cols": "INTEGER", "sample_id": "TEXT", "currency": "TEXT DEFAULT 'USD'",
+                 "number_style": "TEXT DEFAULT 'international'"},
+    "runs": {"n_feedback": "INTEGER DEFAULT 0", "reproducible": "INTEGER", "model": "TEXT", "duration_s": "REAL"},
+    "messages": {"elapsed_s": "REAL"},
+}
+
 
 class Database:
     def __init__(self, path: Path | str):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._conn() as c:
+            for table, cols in MIGRATIONS.items():  # upgrade old databases before the schema's indexes run
+                existing = {r["name"] for r in c.execute(f"PRAGMA table_info({table})")}
+                if existing:
+                    for col, ddl in cols.items():
+                        if col not in existing:
+                            c.execute(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}")
             c.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
 
     @contextmanager
@@ -30,11 +45,13 @@ class Database:
             conn.close()
 
     # ---- sessions -------------------------------------------------------
-    def create_session(self, session_id: str, dataset_name: str, rows: int, profile: str) -> None:
+    def create_session(self, session_id: str, dataset_name: str, rows: int, profile: str, *, cols: int | None = None,
+                       sample_id: str | None = None, currency: str = "USD", number_style: str = "international") -> None:
         with self._conn() as c:
             c.execute(
-                "INSERT INTO sessions (id, dataset_name, dataset_rows, data_profile) VALUES (?, ?, ?, ?)",
-                (session_id, dataset_name, rows, profile),
+                """INSERT INTO sessions (id, dataset_name, dataset_rows, data_profile, dataset_cols, sample_id,
+                                         currency, number_style) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (session_id, dataset_name, rows, profile, cols, sample_id, currency, number_style),
             )
 
     def save_team_state(self, session_id: str, state: dict[str, Any]) -> None:
@@ -53,8 +70,10 @@ class Database:
     def list_sessions(self, limit: int = 20) -> list[dict[str, Any]]:
         with self._conn() as c:
             rows = c.execute(
-                """SELECT s.id, s.created_at, s.dataset_name, COUNT(r.id) AS n_runs,
-                          (SELECT question FROM runs WHERE session_id = s.id ORDER BY run_no LIMIT 1) AS first_question
+                """SELECT s.id, s.created_at, s.dataset_name, s.dataset_rows, s.currency, COUNT(r.id) AS n_runs,
+                          SUM(r.status = 'approved') AS n_approved, SUM(r.n_exec_errors) AS n_fixes,
+                          (SELECT question FROM runs WHERE session_id = s.id ORDER BY run_no LIMIT 1) AS first_question,
+                          (SELECT status FROM runs WHERE session_id = s.id ORDER BY run_no DESC LIMIT 1) AS last_status
                    FROM sessions s LEFT JOIN runs r ON r.session_id = s.id
                    GROUP BY s.id ORDER BY s.created_at DESC LIMIT ?""",
                 (limit,),
@@ -72,13 +91,21 @@ class Database:
             c.execute("INSERT INTO runs (session_id, run_no, question) VALUES (?, ?, ?)", (session_id, run_no, question))
 
     def finish_run(self, session_id: str, run_no: int, *, status: str, stop_reason: str | None,
-                   answer: str | None, n_messages: int, n_exec_errors: int) -> None:
+                   answer: str | None, n_messages: int, n_exec_errors: int, n_feedback: int = 0,
+                   model: str | None = None, duration_s: float | None = None) -> None:
         with self._conn() as c:
             c.execute(
                 """UPDATE runs SET finished_at = datetime('now'), status = ?, stop_reason = ?, answer = ?,
-                          n_messages = ?, n_exec_errors = ? WHERE session_id = ? AND run_no = ?""",
-                (status, stop_reason, answer, n_messages, n_exec_errors, session_id, run_no),
+                          n_messages = ?, n_exec_errors = ?, n_feedback = ?, model = ?, duration_s = ?
+                   WHERE session_id = ? AND run_no = ?""",
+                (status, stop_reason, answer, n_messages, n_exec_errors, n_feedback, model, duration_s,
+                 session_id, run_no),
             )
+
+    def set_reproducible(self, session_id: str, run_no: int, same: bool) -> None:
+        with self._conn() as c:
+            c.execute("UPDATE runs SET reproducible = ? WHERE session_id = ? AND run_no = ?",
+                      (int(same), session_id, run_no))
 
     def set_human_verdict(self, session_id: str, run_no: int, verdict: str) -> None:
         with self._conn() as c:
@@ -91,17 +118,19 @@ class Database:
         return [dict(r) for r in rows]
 
     # ---- messages -------------------------------------------------------
-    def add_message(self, session_id: str, run_no: int, seq: int, source: str, kind: str, content: str) -> None:
+    def add_message(self, session_id: str, run_no: int, seq: int, source: str, kind: str, content: str,
+                    elapsed_s: float | None = None) -> None:
         with self._conn() as c:
             c.execute(
-                "INSERT INTO messages (session_id, run_no, seq, source, kind, content) VALUES (?, ?, ?, ?, ?, ?)",
-                (session_id, run_no, seq, source, kind, content),
+                """INSERT INTO messages (session_id, run_no, seq, source, kind, content, elapsed_s)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (session_id, run_no, seq, source, kind, content, elapsed_s),
             )
 
     def get_messages(self, session_id: str) -> list[dict[str, Any]]:
         with self._conn() as c:
             rows = c.execute(
-                "SELECT run_no, seq, source, kind, content FROM messages WHERE session_id = ? ORDER BY run_no, seq",
+                "SELECT run_no, seq, source, kind, content, elapsed_s FROM messages WHERE session_id = ? ORDER BY run_no, seq",
                 (session_id,),
             ).fetchall()
         return [dict(r) for r in rows]

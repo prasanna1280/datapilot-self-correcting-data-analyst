@@ -27,6 +27,7 @@ from database import Database
 from . import prompts
 from .config import settings
 from .data_loader import DATA_FILE_NAME, profile, stage_dataset
+from .formatting import detect_currency, reporting_standard
 from .executors import make_executor
 from .team import APPROVED, CODER, EXECUTOR, PLANNER, REVIEWER, build_team, execution_failed, is_approved, make_model_client
 
@@ -39,6 +40,7 @@ class AgentEvent:
     source: str
     kind: str  # task | plan | code | exec_ok | exec_error | feedback | approved | other
     content: str
+    elapsed_s: float = 0.0
 
 
 @dataclass
@@ -50,6 +52,9 @@ class RunResult:
     answer: str | None
     n_messages: int
     n_exec_errors: int
+    n_feedback: int = 0
+    duration_s: float = 0.0
+    reproducible: bool | None = None
     charts: list[Path] = field(default_factory=list)
     script: Path | None = None
     events: list[AgentEvent] = field(default_factory=list)
@@ -79,35 +84,52 @@ def strip_approved(text: str) -> str:
 
 class AnalysisSession:
     def __init__(self, db: Database, session_id: str, dataset_name: str, data_profile: str,
-                 team_state: dict | None = None):
+                 team_state: dict | None = None, *, currency: str = "USD", number_style: str = "international",
+                 sample_id: str | None = None, rows: int | None = None, cols: int | None = None):
         self.db = db
         self.id = session_id
         self.dataset_name = dataset_name
         self.profile = data_profile
         self.team_state = team_state
+        self.currency = currency or "USD"
+        self.number_style = number_style or "international"
+        self.sample_id = sample_id
+        self.rows = rows
+        self.cols = cols
         self.work_dir = settings.sessions_dir / session_id
 
     # ---- construction ---------------------------------------------------
     @classmethod
-    def create(cls, db: Database, df: pd.DataFrame, dataset_name: str) -> "AnalysisSession":
+    def create(cls, db: Database, df: pd.DataFrame, dataset_name: str, *, currency: str | None = None,
+               number_style: str = "international", sample_id: str | None = None) -> "AnalysisSession":
         session_id = uuid.uuid4().hex
         work_dir = settings.sessions_dir / session_id
         stage_dataset(df, work_dir)
         data_profile = profile(df)
-        db.create_session(session_id, dataset_name, len(df), data_profile)
-        return cls(db, session_id, dataset_name, data_profile)
+        currency = currency or detect_currency(df.columns) or "USD"
+        db.create_session(session_id, dataset_name, len(df), data_profile, cols=len(df.columns),
+                          sample_id=sample_id, currency=currency, number_style=number_style)
+        return cls(db, session_id, dataset_name, data_profile, currency=currency, number_style=number_style,
+                   sample_id=sample_id, rows=len(df), cols=len(df.columns))
 
     @classmethod
     def load(cls, db: Database, session_id: str) -> "AnalysisSession | None":
         row = db.get_session(session_id)
         if not row:
             return None
-        return cls(db, session_id, row["dataset_name"], row["data_profile"], row["team_state"])
+        return cls(db, session_id, row["dataset_name"], row["data_profile"], row["team_state"],
+                   currency=row.get("currency"), number_style=row.get("number_style"), sample_id=row.get("sample_id"),
+                   rows=row.get("dataset_rows"), cols=row.get("dataset_cols"))
+
+    @property
+    def standard(self) -> str:
+        return reporting_standard(self.currency, self.number_style)
 
     # ---- running --------------------------------------------------------
     def _task_text(self, question: str, run_no: int) -> str:
         if run_no == 1 or not self.team_state:
-            return prompts.TASK_TEMPLATE.format(question=question, file_name=DATA_FILE_NAME, profile=self.profile)
+            return prompts.TASK_TEMPLATE.format(question=question, file_name=DATA_FILE_NAME, profile=self.profile,
+                                                standard=self.standard)
         return prompts.FOLLOW_UP_TEMPLATE.format(question=question, file_name=DATA_FILE_NAME)
 
     async def ask(self, question: str, on_event: EventCallback | None = None,
@@ -135,9 +157,10 @@ class AnalysisSession:
                 if not isinstance(item, BaseChatMessage):
                     continue  # streaming chunks / internal events
                 text = item.to_text()
-                ev = AgentEvent(len(events) + 1, item.source, classify(item.source, text), text)
+                ev = AgentEvent(len(events) + 1, item.source, classify(item.source, text), text,
+                                round(time.time() - started, 1))
                 events.append(ev)
-                self.db.add_message(self.id, run_no, ev.seq, ev.source, ev.kind, ev.content)
+                self.db.add_message(self.id, run_no, ev.seq, ev.source, ev.kind, ev.content, ev.elapsed_s)
                 if on_event:
                     res = on_event(ev)
                     if inspect.isawaitable(res):
@@ -154,13 +177,21 @@ class AnalysisSession:
                 await client.close()
             answer = strip_approved(events[-1].content) if status == "approved" else None
             n_errors = sum(1 for e in events if e.kind == "exec_error")
+            n_feedback = sum(1 for e in events if e.kind == "feedback")
+            duration = round(time.time() - started, 1)
+            model = settings.model if own_client else "replay"
             self.db.finish_run(self.id, run_no, status=status, stop_reason=stop_reason, answer=answer,
-                               n_messages=len(events), n_exec_errors=n_errors)
+                               n_messages=len(events), n_exec_errors=n_errors, n_feedback=n_feedback,
+                               model=model, duration_s=duration)
 
         charts, script = self._snapshot(run_no, since=started - 1)
+        reproducible = None
+        if status == "approved" and script:
+            reproducible, _ = await self.reproduce(run_no)
         return RunResult(
             run_no=run_no, question=question, status=status, stop_reason=stop_reason, answer=answer,
-            n_messages=len(events), n_exec_errors=n_errors, charts=charts, script=script, events=events,
+            n_messages=len(events), n_exec_errors=n_errors, n_feedback=n_feedback, duration_s=duration,
+            reproducible=reproducible, charts=charts, script=script, events=events,
         )
 
     # ---- artifacts ------------------------------------------------------
@@ -185,14 +216,18 @@ class AnalysisSession:
         script = out / SCRIPT_NAME
         return charts, script if script.exists() else None
 
-    def last_exec_output(self) -> str | None:
-        msgs = [m for m in self.db.get_messages(self.id) if m["kind"] == "exec_ok"]
+    def last_exec_output(self, run_no: int | None = None) -> str | None:
+        msgs = [m for m in self.db.get_messages(self.id)
+                if m["kind"] == "exec_ok" and (run_no is None or m["run_no"] == run_no)]
         return msgs[-1]["content"] if msgs else None
 
-    async def reproduce(self) -> tuple[bool, str]:
-        """Re-run the saved analysis.py and compare with what the Executor printed."""
-        script = self.work_dir / SCRIPT_NAME
-        if not script.exists():
+    async def reproduce(self, run_no: int | None = None) -> tuple[bool, str]:
+        """Re-run a run's saved analysis.py in the sandbox and compare with what the Executor printed."""
+        if run_no is None:
+            runs = self.db.get_runs(self.id)
+            run_no = runs[-1]["run_no"] if runs else 1
+        _, script = self.artifacts(run_no)
+        if script is None:
             return False, "analysis.py not found"
         executor = make_executor(self.id, self.work_dir)
         await executor.start()
@@ -202,8 +237,9 @@ class AnalysisSession:
             )
         finally:
             await executor.stop()
-        expected = self.last_exec_output() or ""
-        return _normalise(result.output) == _normalise(expected), result.output
+        same = _normalise(result.output) == _normalise(self.last_exec_output(run_no) or "")
+        self.db.set_reproducible(self.id, run_no, same)
+        return same, result.output
 
 
 def _normalise(text: str) -> str:

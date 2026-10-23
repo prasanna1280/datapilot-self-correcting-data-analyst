@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="232" height="40" viewBox="0 0 232 40">
+  <rect x="0" y="2" width="36" height="36" rx="9" fill="#7A1F2B"/>
+  <path d="M9 27V13h5.2c4.4 0 7 2.6 7 7s-2.6 7-7 7H9zm3-2.6h2.1c2.6 0 4.1-1.6 4.1-4.4s-1.5-4.4-4.1-4.4H12v8.8z" fill="#fff"/>
+  <rect x="23.5" y="21" width="3" height="6" rx="1" fill="#F2C6CB"/>
+  <rect x="27.5" y="17" width="3" height="10" rx="1" fill="#fff"/>
+  <text x="46" y="20" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0F172A">DataPilot</text>
+  <text x="46" y="34" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#64748B">Self-Correcting Data Analyst</text>
+</svg>

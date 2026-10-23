@@ -125,7 +125,65 @@ def generate(rows: int = TARGET_ROWS, seed: int = SEED) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
+DATASET_CATALOG = [
+    {
+        "id": "retail_india", "file": "sales_2026.csv", "title": "Retail Sales — India",
+        "domain": "Retail", "currency": "INR", "number_style": "indian",
+        "description": "12 months of store orders across 4 regions and 5 categories (Oct 2025 – Sep 2026).",
+        "questions": [
+            "Which category had the biggest revenue drop in September vs August, and which region caused most of it?",
+            "Did discounts on Earbuds X2 change between August and September 2026?",
+            "Show the monthly revenue trend by category for the last 6 months.",
+        ],
+    },
+    {
+        "id": "ecommerce_global", "file": "global_ecommerce_orders_2026.csv", "title": "Global E-commerce Orders",
+        "domain": "E-commerce", "currency": "USD", "number_style": "international",
+        "description": "15,000 online orders across 12 countries, 3 regions and 3 sales channels, with returns (Jan – Sep 2026).",
+        "questions": [
+            "Which region and sales channel grew net revenue fastest in Q3 2026 compared with Q2 2026?",
+            "Which country had the highest Apparel return rate in August 2026, and how much revenue was lost to returns?",
+            "What is the monthly net revenue trend by region, after discounts and returns?",
+        ],
+    },
+    {
+        "id": "saas_subscriptions", "file": "saas_subscriptions_2026.csv", "title": "SaaS Subscriptions (MRR)",
+        "domain": "SaaS / Finance", "currency": "EUR", "number_style": "international",
+        "description": "Monthly subscription events (new, active, expansion, churned) with MRR per customer (Jan – Sep 2026).",
+        "questions": [
+            "What was the monthly churn rate by plan, and which plan and region drove the churn spike?",
+            "How did total MRR grow from January to September 2026, by region?",
+            "Which plan has the highest average MRR per seat?",
+        ],
+    },
+    {
+        "id": "supply_chain", "file": "supply_chain_shipments_2026.csv", "title": "Supply Chain Shipments",
+        "domain": "Logistics", "currency": "USD", "number_style": "international",
+        "description": "9,000 shipments across 8 trade lanes, 5 carriers and 3 transport modes, with promised vs actual delivery.",
+        "questions": [
+            "Which carrier had the worst on-time delivery rate in July–August 2026, and on which lanes?",
+            "What is the average freight cost per kg by transport mode?",
+            "How did the average delivery delay in days change month by month?",
+        ],
+    },
+    {
+        "id": "hr_workforce", "file": "hr_workforce_2026.xlsx", "title": "Workforce & Attrition (Excel, 3 sheets)",
+        "domain": "HR", "currency": "USD", "number_style": "international",
+        "description": "Employee register split into Americas, EMEA and APAC sheets: hires, exits, levels and salaries.",
+        "questions": [
+            "Which department and region had the highest attrition rate in 2026?",
+            "What is the median annual salary by job level and region?",
+            "What were the top exit reasons for employees who left in 2026?",
+        ],
+    },
+]
+
+
 def main() -> None:
+    import json
+
+    import sample_datasets as sd
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     df = generate()
     csv_path = OUT_DIR / "sales_2026.csv"
@@ -137,9 +195,25 @@ def main() -> None:
     with pd.ExcelWriter(xlsx_path, engine="openpyxl") as xw:
         for quarter in sorted(q.unique()):
             df[q == quarter].to_excel(xw, sheet_name=quarter, index=False)
-
     print(f"wrote {len(df):,} rows -> {csv_path}")
     print(f"wrote {q.nunique()} sheets -> {xlsx_path}")
+
+    for name, frame in (
+        ("global_ecommerce_orders_2026.csv", sd.global_ecommerce_orders()),
+        ("saas_subscriptions_2026.csv", sd.saas_subscriptions()),
+        ("supply_chain_shipments_2026.csv", sd.supply_chain_shipments()),
+    ):
+        frame.to_csv(OUT_DIR / name, index=False)
+        print(f"wrote {len(frame):,} rows -> {name}")
+
+    sheets = sd.hr_workforce()
+    with pd.ExcelWriter(OUT_DIR / "hr_workforce_2026.xlsx", engine="openpyxl") as xw:
+        for sheet, frame in sheets.items():
+            frame.to_excel(xw, sheet_name=sheet, index=False)
+    print(f"wrote {sum(map(len, sheets.values())):,} rows in {len(sheets)} sheets -> hr_workforce_2026.xlsx")
+
+    (OUT_DIR / "catalog.json").write_text(json.dumps(DATASET_CATALOG, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"wrote catalog.json ({len(DATASET_CATALOG)} datasets)")
 
 
 if __name__ == "__main__":

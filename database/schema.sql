@@ -6,6 +6,10 @@ CREATE TABLE IF NOT EXISTS sessions (
     dataset_name  TEXT NOT NULL,
     dataset_rows  INTEGER,
     data_profile  TEXT,                           -- column summary given to the Planner
+    dataset_cols  INTEGER,
+    sample_id     TEXT,                           -- catalog id when a sample dataset was used
+    currency      TEXT DEFAULT 'USD',             -- ISO 4217
+    number_style  TEXT DEFAULT 'international',   -- international (K/M/B) | indian (L/Cr)
     team_state    TEXT                            -- AutoGen team.save_state() JSON (for follow-ups)
 );
 
@@ -21,7 +25,11 @@ CREATE TABLE IF NOT EXISTS runs (
     answer        TEXT,                           -- Reviewer's final answer
     n_messages    INTEGER DEFAULT 0,
     n_exec_errors INTEGER DEFAULT 0,              -- how many times the Coder had to self-correct
-    human_verdict TEXT,                           -- NULL | accepted | rejected
+    n_feedback    INTEGER DEFAULT 0,              -- Reviewer send-backs
+    reproducible  INTEGER,                        -- NULL = not checked, 1 = same output, 0 = differs
+    model         TEXT,
+    duration_s    REAL,
+    human_verdict TEXT,                           -- NULL | accepted | rejected | follow_up
     UNIQUE (session_id, run_no)
 );
 
@@ -33,6 +41,7 @@ CREATE TABLE IF NOT EXISTS messages (
     source      TEXT NOT NULL,                    -- user | Planner | Coder | Executor | Reviewer
     kind        TEXT NOT NULL,                    -- task | plan | code | exec_ok | exec_error | feedback | approved | other
     content     TEXT NOT NULL,
+    elapsed_s   REAL,                             -- seconds since the run started
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

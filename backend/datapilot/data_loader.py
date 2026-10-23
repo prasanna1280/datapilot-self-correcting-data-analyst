@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import io
+import shutil
 from pathlib import Path
 
 import pandas as pd
 
 ALL_SHEETS = "__all__"
 DATA_FILE_NAME = "data.csv"
+STYLE_FILE = Path(__file__).with_name("assets") / "datapilot.mplstyle"
 
 
 def list_sheets(raw: bytes) -> list[str]:
@@ -35,10 +37,11 @@ def read_upload(file_name: str, raw: bytes, sheet: str | None = None) -> pd.Data
 
 
 def stage_dataset(df: pd.DataFrame, work_dir: Path) -> Path:
-    """Write the dataset as data.csv inside the sandbox folder the code runs in."""
+    """Write the dataset as data.csv (plus the house chart style) inside the sandbox folder."""
     work_dir.mkdir(parents=True, exist_ok=True)
     path = work_dir / DATA_FILE_NAME
     df.to_csv(path, index=False)
+    shutil.copyfile(STYLE_FILE, work_dir / STYLE_FILE.name)
     return path
 
 

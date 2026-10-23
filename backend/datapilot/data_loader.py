@@ -42,6 +42,17 @@ def stage_dataset(df: pd.DataFrame, work_dir: Path) -> Path:
     return path
 
 
+def _as_dates(s: pd.Series) -> pd.Series | None:
+    """Return the column parsed as dates if (nearly) all values are dates, else None."""
+    if pd.api.types.is_datetime64_any_dtype(s):
+        return s
+    sample = s.dropna().astype(str).head(500)
+    if sample.empty or not sample.str.match(r"^\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}").all():
+        return None
+    parsed = pd.to_datetime(s, errors="coerce")
+    return parsed if parsed.notna().mean() > 0.95 else None
+
+
 def profile(df: pd.DataFrame, max_categories: int = 8) -> str:
     """Compact, token-cheap description of the data for the Planner/Coder."""
     lines = [f"Rows: {len(df):,} | Columns: {len(df.columns)}", "Columns (dtype -> examples):"]
@@ -49,7 +60,14 @@ def profile(df: pd.DataFrame, max_categories: int = 8) -> str:
         s = df[col]
         nunique = s.nunique(dropna=True)
         is_text = pd.api.types.is_string_dtype(s) or s.dtype == object
-        if is_text and nunique <= max_categories:
+        dates = _as_dates(s) if is_text or pd.api.types.is_datetime64_any_dtype(s) else None
+        if dates is not None:
+            months = dates.dt.strftime("%Y-%m").dropna().unique()
+            months = sorted(months)
+            shown = ", ".join(months) if len(months) <= 24 else f"{months[0]} ... {months[-1]}"
+            detail = (f"DATE from {dates.min():%Y-%m-%d} to {dates.max():%Y-%m-%d}; "
+                      f"{len(months)} months present (YYYY-MM): {shown}")
+        elif is_text and nunique <= max_categories:
             examples = ", ".join(map(str, s.dropna().unique()[:max_categories]))
             detail = f"{nunique} values: {examples}"
         elif pd.api.types.is_numeric_dtype(s):

@@ -42,3 +42,9 @@ def test_unknown_sheet_and_type_raise():
 def test_stage_dataset_writes_data_csv(tmp_path, sales_df):
     path = stage_dataset(sales_df.head(5), tmp_path / "s")
     assert path.name == "data.csv" and len(pd.read_csv(path)) == 5
+
+
+def test_profile_lists_date_range_and_months(sales_df):
+    text = profile(sales_df)
+    assert "DATE from 2025-10-01 to 2026-09-30" in text
+    assert "2026-08, 2026-09" in text

@@ -22,7 +22,7 @@ from autogen_ext.models.replay import ReplayChatCompletionClient  # noqa: E402
 from backend.datapilot.config import settings  # noqa: E402
 from backend.datapilot.data_loader import read_upload  # noqa: E402
 from backend.datapilot.runner import AnalysisSession  # noqa: E402
-from backend.tests.test_team_replay import ANSWER, BUGGY, FIXED, PLAN  # noqa: E402
+from backend.tests.replay_script import ANSWER, BUGGY, FIXED, PLAN  # noqa: E402
 from database import Database  # noqa: E402
 
 QUESTION = "Which category had the biggest revenue drop in September vs August, and which region caused most of it?"

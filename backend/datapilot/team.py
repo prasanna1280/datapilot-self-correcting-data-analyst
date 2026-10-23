@@ -69,7 +69,10 @@ def make_model_client() -> ChatCompletionClient:
 
     if not settings.openai_api_key:
         raise RuntimeError("OPENAI_API_KEY is not set. Add it to .env (see .env.example).")
-    return OpenAIChatCompletionClient(model=settings.model, api_key=settings.openai_api_key, temperature=0)
+    # Reasoning models (gpt-5*, o-series) only accept the default temperature.
+    fixed_temp = settings.model.startswith(("gpt-5", "o1", "o3", "o4"))
+    extra = {} if fixed_temp else {"temperature": 0}
+    return OpenAIChatCompletionClient(model=settings.model, api_key=settings.openai_api_key, **extra)
 
 
 def make_termination(max_messages: int | None = None) -> TerminationCondition:

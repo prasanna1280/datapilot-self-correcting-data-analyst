@@ -69,4 +69,4 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 | ✅ | Human approval + follow-up in the same session | Approve/Reject buttons, chat follow-ups, CLI `UserProxyAgent` |
 
 ## Tech stack
-AutoGen 0.7 (`autogen-agentchat`, `autogen-ext[openai]`) · OpenAI `gpt-4o-mini` · Streamlit · pandas · matplotlib · SQLite · fpdf2 · Docker · Traefik + Let's Encrypt
+AutoGen 0.7 (`autogen-agentchat`, `autogen-ext[openai]`) · OpenAI `gpt-4.1` · Streamlit · pandas · matplotlib · SQLite · fpdf2 · Docker · Traefik + Let's Encrypt
